@@ -1,0 +1,8 @@
+export enum QuestionType {
+  TEXT = 'TEXT',
+  NUMBER = 'NUMBER',
+  MULTIPLE_CHOICE = 'MULTIPLE_CHOICE',
+  CHECKBOX = 'CHECKBOX',
+  SCALE = 'SCALE',
+  FILE_UPLOAD = 'FILE_UPLOAD',
+}

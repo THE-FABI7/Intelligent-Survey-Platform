@@ -1,0 +1,54 @@
+# Docker Production Deployment
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: survey_platform_db_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    networks:
+      - survey_network_prod
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: survey_platform_api_prod
+    restart: always
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_DATABASE}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - survey_network_prod
+
+volumes:
+  postgres_data_prod:
+    driver: local
+
+networks:
+  survey_network_prod:
+    driver: bridge
