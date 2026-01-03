@@ -9,6 +9,7 @@ import { QuestionType } from '@common/enums';
 import { SurveyVersion } from './survey-version.entity';
 import { QuestionOption } from './question-option.entity';
 import { ResponseItem } from '../../responses/entities/response-item.entity';
+import { VisibilityCondition } from '../types/visibility-condition.type';
 
 @Entity('questions')
 export class Question {
@@ -17,6 +18,9 @@ export class Question {
 
   @Column()
   text: string;
+
+  @Column({ nullable: true })
+  code: string;
 
   @Column({
     type: 'enum',
@@ -39,6 +43,9 @@ export class Question {
     pattern?: string;
     allowedExtensions?: string[];
   };
+
+  @Column({ type: 'jsonb', nullable: true })
+  visibilityConditions?: VisibilityCondition[];
 
   @ManyToOne(() => SurveyVersion, (version) => version.questions, {
     onDelete: 'CASCADE',

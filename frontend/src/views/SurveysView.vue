@@ -131,6 +131,25 @@
             ></textarea>
           </div>
 
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">
+              Start from template (optional)
+            </label>
+            <select
+              v-model="selectedTemplateId"
+              class="w-full px-4 py-2 bg-dark-900 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">Blank survey</option>
+              <option
+                v-for="template in templates"
+                :key="template.id"
+                :value="template.id"
+              >
+                {{ template.name }}
+              </option>
+            </select>
+          </div>
+
           <div class="flex justify-end gap-3 pt-4">
             <AppButton
               type="button"
@@ -161,14 +180,16 @@ import AppCard from '@/components/AppCard.vue'
 import AppTable from '@/components/AppTable.vue'
 import AppButton from '@/components/AppButton.vue'
 import { surveyService } from '@/services/api'
-import type { Survey } from '@/types'
+import type { Survey, SurveyTemplate } from '@/types'
 
 const router = useRouter()
 
 const surveys = ref<Survey[]>([])
+const templates = ref<SurveyTemplate[]>([])
 const loading = ref(true)
 const showCreateModal = ref(false)
 const creating = ref(false)
+const selectedTemplateId = ref('')
 
 const newSurvey = ref({
   title: '',
@@ -195,16 +216,31 @@ const loadSurveys = async () => {
   }
 }
 
+const loadTemplates = async () => {
+  try {
+    const response = await surveyService.getTemplates()
+    templates.value = response
+  } catch (error) {
+    console.error('Failed to load templates:', error)
+  }
+}
+
 const handleCreateSurvey = async () => {
   try {
     creating.value = true
-    const response = await surveyService.create(newSurvey.value)
+    const survey = selectedTemplateId.value
+      ? await surveyService.applyTemplate(selectedTemplateId.value, {
+          title: newSurvey.value.title,
+          description: newSurvey.value.description,
+        })
+      : await surveyService.create(newSurvey.value)
     
     showCreateModal.value = false
     newSurvey.value = { title: '', description: '' }
+    selectedTemplateId.value = ''
     
     // Redirect to the survey detail page to add questions
-    router.push(`/surveys/${response.id}`)
+    router.push(`/surveys/${survey.id}`)
   } catch (error) {
     console.error('Failed to create survey:', error)
     alert('Failed to create survey. Please try again.')
@@ -229,5 +265,6 @@ const deleteSurvey = async (id: string) => {
 
 onMounted(() => {
   loadSurveys()
+  loadTemplates()
 })
 </script>

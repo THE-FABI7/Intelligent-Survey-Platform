@@ -10,7 +10,8 @@ import {
   IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { QuestionType } from '@common/enums';
+import { QuestionType, VisibilityOperator } from '@common/enums';
+import { VisibilityCondition } from '../types/visibility-condition.type';
 
 class QuestionOptionDto {
   @ApiProperty({ example: 'Option 1' })
@@ -28,10 +29,29 @@ class QuestionOptionDto {
   orderIndex?: number;
 }
 
+class VisibilityConditionDto implements VisibilityCondition {
+  @ApiProperty({ example: 'q1' })
+  @IsString()
+  questionCode: string;
+
+  @ApiProperty({ enum: VisibilityOperator })
+  @IsEnum(VisibilityOperator)
+  operator: VisibilityOperator;
+
+  @ApiProperty({ example: 'YES', required: false, description: 'Value compared against the referenced question answer' })
+  @IsOptional()
+  value?: any;
+}
+
 export class CreateQuestionDto {
   @ApiProperty({ example: 'How satisfied are you with our service?' })
   @IsString()
   text: string;
+
+  @ApiProperty({ example: 'q1', required: false, description: 'Stable code used to reference the question in skip logic' })
+  @IsString()
+  @IsOptional()
+  code?: string;
 
   @ApiProperty({ enum: QuestionType, example: QuestionType.MULTIPLE_CHOICE })
   @IsEnum(QuestionType)
@@ -68,4 +88,11 @@ export class CreateQuestionDto {
   @Type(() => QuestionOptionDto)
   @IsOptional()
   options?: QuestionOptionDto[];
+
+  @ApiProperty({ type: [VisibilityConditionDto], required: false })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VisibilityConditionDto)
+  @IsOptional()
+  visibilityConditions?: VisibilityCondition[];
 }

@@ -1,12 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Survey, SurveyVersion, Question, QuestionOption } from './entities';
+import { Survey, SurveyVersion, Question, QuestionOption, SurveyTemplate } from './entities';
 import {
   CreateSurveyDto,
   UpdateSurveyDto,
   CreateSurveyVersionDto,
+  CreateQuestionDto,
+  CreateSurveyTemplateDto,
+  ApplySurveyTemplateDto,
 } from './dto';
+import { VisibilityCondition } from './types/visibility-condition.type';
 
 @Injectable()
 export class SurveysService {
@@ -15,11 +19,65 @@ export class SurveysService {
     private surveyRepository: Repository<Survey>,
     @InjectRepository(SurveyVersion)
     private surveyVersionRepository: Repository<SurveyVersion>,
+    @InjectRepository(SurveyTemplate)
+    private surveyTemplateRepository: Repository<SurveyTemplate>,
     @InjectRepository(Question)
     private questionRepository: Repository<Question>,
     @InjectRepository(QuestionOption)
     private questionOptionRepository: Repository<QuestionOption>,
   ) {}
+
+    private prepareQuestions(questions: CreateQuestionDto[]): CreateQuestionDto[] {
+      const codes = new Set<string>();
+
+      return questions.map((question, index) => {
+        const code = (question.code || `q${index + 1}`).trim();
+
+        if (codes.has(code)) {
+          throw new BadRequestException(
+            `Duplicate question code "${code}" found in survey version payload`,
+          );
+        }
+
+        codes.add(code);
+
+        return {
+          ...question,
+          code,
+          orderIndex: question.orderIndex ?? index + 1,
+          required: question.required ?? false,
+        };
+      });
+    }
+
+    private validateVisibilityRules(questions: CreateQuestionDto[]): void {
+      const orderByCode = new Map<string, number>();
+
+      questions.forEach((question) => {
+        orderByCode.set(question.code, question.orderIndex ?? 0);
+      });
+
+      questions.forEach((question) => {
+        if (!question.visibilityConditions || question.visibilityConditions.length === 0) {
+          return;
+        }
+
+        for (const condition of question.visibilityConditions as VisibilityCondition[]) {
+          if (!orderByCode.has(condition.questionCode)) {
+            throw new BadRequestException(
+              `Question ${question.code} references unknown question code ${condition.questionCode} in skip logic`,
+            );
+          }
+
+          const referencedOrder = orderByCode.get(condition.questionCode) as number;
+          if (referencedOrder >= (question.orderIndex ?? referencedOrder + 1)) {
+            throw new BadRequestException(
+              `Question ${question.code} can only depend on previous questions in skip logic`,
+            );
+          }
+        }
+      });
+    }
 
   async create(createSurveyDto: CreateSurveyDto, userId: string): Promise<Survey> {
     const survey = this.surveyRepository.create({
@@ -43,6 +101,31 @@ export class SurveysService {
       where: { id: savedSurvey.id },
       relations: ['versions'],
     });
+  }
+
+  private async persistQuestionsToVersion(
+    questions: CreateQuestionDto[],
+    version: SurveyVersion,
+  ): Promise<void> {
+    for (const questionDto of questions) {
+      const question = this.questionRepository.create({
+        ...questionDto,
+        surveyVersion: version,
+      });
+
+      const savedQuestion = await this.questionRepository.save(question);
+
+      if (questionDto.options && questionDto.options.length > 0) {
+        const options = questionDto.options.map((optionDto) =>
+          this.questionOptionRepository.create({
+            ...optionDto,
+            question: savedQuestion,
+          }),
+        );
+
+        await this.questionOptionRepository.save(options);
+      }
+    }
   }
 
   async findAll(): Promise<Survey[]> {
@@ -88,6 +171,9 @@ export class SurveysService {
   ): Promise<SurveyVersion> {
     const survey = await this.findOne(surveyId);
 
+    const normalizedQuestions = this.prepareQuestions(createVersionDto.questions);
+    this.validateVisibilityRules(normalizedQuestions);
+
     const versionCount = await this.surveyVersionRepository.count({
       where: { survey: { id: surveyId } },
     });
@@ -100,26 +186,7 @@ export class SurveysService {
 
     const savedVersion = await this.surveyVersionRepository.save(version);
 
-    // Create questions and options
-    for (const questionDto of createVersionDto.questions) {
-      const question = this.questionRepository.create({
-        ...questionDto,
-        surveyVersion: savedVersion,
-      });
-
-      const savedQuestion = await this.questionRepository.save(question);
-
-      if (questionDto.options && questionDto.options.length > 0) {
-        const options = questionDto.options.map((optionDto) =>
-          this.questionOptionRepository.create({
-            ...optionDto,
-            question: savedQuestion,
-          }),
-        );
-
-        await this.questionOptionRepository.save(options);
-      }
-    }
+    await this.persistQuestionsToVersion(normalizedQuestions, savedVersion);
 
     return this.surveyVersionRepository.findOne({
       where: { id: savedVersion.id },
@@ -156,5 +223,83 @@ export class SurveysService {
     }
 
     return version;
+  }
+
+  async createTemplate(
+    createSurveyTemplateDto: CreateSurveyTemplateDto,
+    userId: string,
+  ): Promise<SurveyTemplate> {
+    const normalizedQuestions = this.prepareQuestions(
+      createSurveyTemplateDto.questions,
+    );
+    this.validateVisibilityRules(normalizedQuestions);
+
+    const template = this.surveyTemplateRepository.create({
+      name: createSurveyTemplateDto.name,
+      description: createSurveyTemplateDto.description,
+      questions: normalizedQuestions,
+      createdBy: { id: userId } as any,
+    });
+
+    return this.surveyTemplateRepository.save(template);
+  }
+
+  async findTemplates(): Promise<SurveyTemplate[]> {
+    return this.surveyTemplateRepository.find({
+      relations: ['createdBy'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findTemplate(id: string): Promise<SurveyTemplate> {
+    const template = await this.surveyTemplateRepository.findOne({
+      where: { id },
+      relations: ['createdBy'],
+    });
+
+    if (!template) {
+      throw new NotFoundException(`Survey template with ID ${id} not found`);
+    }
+
+    return template;
+  }
+
+  async createSurveyFromTemplate(
+    templateId: string,
+    applySurveyTemplateDto: ApplySurveyTemplateDto,
+    userId: string,
+  ): Promise<Survey> {
+    const template = await this.findTemplate(templateId);
+
+    const normalizedQuestions = this.prepareQuestions(
+      template.questions as CreateQuestionDto[],
+    );
+    this.validateVisibilityRules(normalizedQuestions);
+
+    const survey = this.surveyRepository.create({
+      title: applySurveyTemplateDto.title || template.name,
+      description:
+        applySurveyTemplateDto.description ?? template.description ?? null,
+      createdBy: { id: userId } as any,
+    });
+
+    const savedSurvey = await this.surveyRepository.save(survey);
+
+    const version = this.surveyVersionRepository.create({
+      survey: savedSurvey,
+      versionNumber: 1,
+      changeLog:
+        applySurveyTemplateDto.changeLog || 'Created from survey template',
+      isActive: true,
+    });
+
+    const savedVersion = await this.surveyVersionRepository.save(version);
+
+    await this.persistQuestionsToVersion(normalizedQuestions, savedVersion);
+
+    return this.surveyRepository.findOne({
+      where: { id: savedSurvey.id },
+      relations: ['versions', 'versions.questions', 'versions.questions.options'],
+    });
   }
 }

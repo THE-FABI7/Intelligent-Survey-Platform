@@ -1,5 +1,13 @@
 import http from './http'
-import { Survey, SurveyVersion, CreateSurveyDto } from './types'
+import {
+  Survey,
+  SurveyVersion,
+  CreateSurveyDto,
+  CreateSurveyVersionDto,
+  SurveyTemplate,
+  CreateSurveyTemplateDto,
+  ApplySurveyTemplateDto,
+} from './types'
 
 export const surveyService = {
   async getAll(): Promise<Survey[]> {
@@ -26,6 +34,17 @@ export const surveyService = {
     await http.delete(`/surveys/${id}`)
   },
 
+  async createVersion(
+    surveyId: string,
+    data: CreateSurveyVersionDto,
+  ): Promise<SurveyVersion> {
+    const response = await http.post<SurveyVersion>(
+      `/surveys/${surveyId}/versions`,
+      data,
+    )
+    return response.data
+  },
+
   async getVersions(surveyId: string): Promise<SurveyVersion[]> {
     const response = await http.get<SurveyVersion[]>(`/surveys/${surveyId}/versions`)
     return response.data
@@ -34,6 +53,32 @@ export const surveyService = {
   async getVersion(surveyId: string, versionId: string): Promise<SurveyVersion> {
     const response = await http.get<SurveyVersion>(
       `/surveys/${surveyId}/versions/${versionId}`
+    )
+    return response.data
+  },
+
+  async getTemplates(): Promise<SurveyTemplate[]> {
+    const response = await http.get<SurveyTemplate[]>(`/surveys/templates`)
+    return response.data
+  },
+
+  async getTemplate(templateId: string): Promise<SurveyTemplate> {
+    const response = await http.get<SurveyTemplate>(`/surveys/templates/${templateId}`)
+    return response.data
+  },
+
+  async createTemplate(data: CreateSurveyTemplateDto): Promise<SurveyTemplate> {
+    const response = await http.post<SurveyTemplate>(`/surveys/templates`, data)
+    return response.data
+  },
+
+  async applyTemplate(
+    templateId: string,
+    data: ApplySurveyTemplateDto,
+  ): Promise<Survey> {
+    const response = await http.post<Survey>(
+      `/surveys/templates/${templateId}/apply`,
+      data,
     )
     return response.data
   },

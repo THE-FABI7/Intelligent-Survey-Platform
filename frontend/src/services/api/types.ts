@@ -25,7 +25,9 @@ export interface Survey {
   description?: string
   createdAt: string
   updatedAt: string
+  createdBy?: User
   versions?: SurveyVersion[]
+  versionsCount?: number
 }
 
 export interface SurveyVersion {
@@ -39,12 +41,14 @@ export interface SurveyVersion {
 
 export interface Question {
   id: string
+  code?: string
   text: string
   type: 'TEXT' | 'NUMBER' | 'MULTIPLE_CHOICE' | 'CHECKBOX' | 'SCALE' | 'FILE_UPLOAD'
   required: boolean
   orderIndex: number
   validationRules?: Record<string, any>
   options?: QuestionOption[]
+  visibilityConditions?: VisibilityCondition[]
 }
 
 export interface QuestionOption {
@@ -52,6 +56,26 @@ export interface QuestionOption {
   text: string
   value?: string
   orderIndex: number
+}
+
+export type VisibilityOperator =
+  | 'EQUALS'
+  | 'NOT_EQUALS'
+  | 'IN'
+  | 'NOT_IN'
+  | 'GREATER_THAN'
+  | 'GREATER_OR_EQUAL'
+  | 'LESS_THAN'
+  | 'LESS_OR_EQUAL'
+  | 'CONTAINS'
+  | 'NOT_CONTAINS'
+  | 'IS_EMPTY'
+  | 'IS_NOT_EMPTY'
+
+export interface VisibilityCondition {
+  questionCode: string
+  operator: VisibilityOperator
+  value?: any
 }
 
 export interface Campaign {
@@ -100,6 +124,48 @@ export interface CampaignMetrics {
 export interface CreateSurveyDto {
   title: string
   description?: string
+}
+
+export interface CreateQuestionDto {
+  text: string
+  type: Question['type']
+  code?: string
+  required?: boolean
+  orderIndex?: number
+  validationRules?: Record<string, any>
+  options?: Array<{
+    text: string
+    value?: string
+    orderIndex?: number
+  }>
+  visibilityConditions?: VisibilityCondition[]
+}
+
+export interface CreateSurveyVersionDto {
+  changeLog?: string
+  isActive?: boolean
+  questions: CreateQuestionDto[]
+}
+
+export interface SurveyTemplate {
+  id: string
+  name: string
+  description?: string
+  createdAt: string
+  createdBy?: User
+  questions: CreateQuestionDto[]
+}
+
+export interface CreateSurveyTemplateDto {
+  name: string
+  description?: string
+  questions: CreateQuestionDto[]
+}
+
+export interface ApplySurveyTemplateDto {
+  title?: string
+  description?: string
+  changeLog?: string
 }
 
 export interface CreateCampaignDto {
