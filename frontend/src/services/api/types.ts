@@ -92,19 +92,26 @@ export interface Campaign {
 
 export interface Response {
   id: string
-  campaignId: string
-  userId?: string
+  campaign: Campaign
+  user?: User
   anonymousId?: string
   startedAt: string
   completedAt: string
   completionTimeSeconds: number
   items: ResponseItem[]
+  createdAt: string
 }
 
 export interface ResponseItem {
   id: string
-  questionId: string
+  question: Question
   value: any
+}
+
+export interface SubmitResponseDto {
+  campaignId: string
+  anonymousId?: string
+  items: { questionId: string; value: any }[]
 }
 
 export interface CampaignMetrics {
@@ -119,6 +126,41 @@ export interface CampaignMetrics {
   status: string
   startDate: string
   endDate: string
+}
+
+export interface QuestionAnalyticsBase {
+  questionId: string
+  questionText: string
+  type: Question['type']
+  totalAnswers: number
+}
+
+export interface ChoiceAnalytics extends QuestionAnalyticsBase {
+  distribution: { key: string; count: number }[]
+}
+
+export interface NumericAnalytics extends QuestionAnalyticsBase {
+  count: number
+  average: number
+  median: number
+  min: number
+  max: number
+  histogram: { bucketStart: number; bucketEnd: number; count: number }[]
+}
+
+export interface TextAnalytics extends QuestionAnalyticsBase {
+  topWords: { term: string; count: number }[]
+  sentiment: { positive: number; negative: number; neutral: number }
+}
+
+export type QuestionAnalytics = ChoiceAnalytics | NumericAnalytics | TextAnalytics | QuestionAnalyticsBase
+
+export interface SurveySummary {
+  surveyId: string
+  activeCampaigns: number
+  closedCampaigns: number
+  responsesLastMonth: number
+  alerts: { campaignId: string; name: string; endsAt: string; message: string }[]
 }
 
 export interface CreateSurveyDto {

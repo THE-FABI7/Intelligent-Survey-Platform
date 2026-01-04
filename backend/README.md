@@ -7,10 +7,13 @@ A modular, scalable NestJS backend for an intelligent survey platform MVP.
 - 🔐 **JWT Authentication** with role-based access control (ADMIN, RESPONDENT)
 - 👥 **User Management** with secure password hashing
 - 📋 **Survey Creation** with multiple question types (TEXT, NUMBER, MULTIPLE_CHOICE, CHECKBOX, SCALE, FILE_UPLOAD)
-- 📦 **Survey Versioning** for historical accuracy and iterative improvements
+- 🧩 **Survey Templates** to clone reusable structures and bootstrap new surveys
+- 📦 **Survey Versioning** for historical accuracy and iterative improvements (initial version auto-created)
+- 🔀 **Conditional Visibility** rules for questions (show/hide based on previous answers)
 - 🚀 **Campaign Management** with lifecycle control (CREATED → PUBLISHED → CLOSED)
 - 📝 **Response Collection** supporting both authenticated and anonymous submissions
-- 📊 **Analytics Dashboard** with completion rates, average times, and answer distributions
+- 📊 **Analytics Dashboard** with completion rates, average times, answer distributions, numeric stats, text keywords, and basic sentiment
+- 📈 **CSV Export** for campaign responses
 - 📚 **Swagger Documentation** for all API endpoints
 
 ## Tech Stack
@@ -185,6 +188,10 @@ backend/
 - `POST /surveys/:id/versions` - Create new version (Admin)
 - `GET /surveys/:id/versions` - List survey versions
 - `GET /surveys/:id/versions/:versionId` - Get specific version
+- `GET /surveys/templates` - List survey templates
+- `GET /surveys/templates/:id` - Get template details
+- `POST /surveys/templates` - Create survey template (Admin)
+- `POST /surveys/:id/apply-template` - Clone a template into an existing survey (Admin)
 
 ### Campaigns
 - `GET /campaigns` - List all campaigns
@@ -204,6 +211,8 @@ backend/
 ### Analytics (Admin only)
 - `GET /analytics/campaigns/:campaignId` - Get campaign metrics
 - `GET /analytics/campaigns/:campaignId/questions/:questionId` - Get question analytics
+- `GET /analytics/surveys/:surveyId/summary` - Admin summary (campaign counts, alerts, recent responses)
+- `GET /analytics/campaigns/:campaignId/export` - Export campaign responses as CSV
 
 ## Example Usage
 
@@ -274,6 +283,28 @@ curl -X POST http://localhost:3000/surveys/{surveyId}/versions \
 
 ### 5. Create a Campaign
 
+### 4b. Save a Survey Version as Template
+
+```bash
+curl -X POST http://localhost:3000/surveys/templates \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "name": "CSAT Baseline",
+    "description": "Reusable CSAT template",
+    "surveyVersionId": "VERSION_ID"
+  }'
+```
+
+### 4c. Create a Survey from a Template
+
+```bash
+curl -X POST http://localhost:3000/surveys/{surveyId}/apply-template \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{ "templateId": "TEMPLATE_ID" }'
+```
+
 ```bash
 curl -X POST http://localhost:3000/campaigns \
   -H "Content-Type: application/json" \
@@ -328,9 +359,10 @@ The application uses TypeORM with automatic synchronization in development mode.
 
 - **User** - Authentication and user profiles
 - **Survey** - Top-level survey container
-- **SurveyVersion** - Versioned survey snapshots
-- **Question** - Individual survey questions
+- **SurveyVersion** - Versioned survey snapshots (initial version auto-created on survey creation)
+- **Question** - Individual survey questions with optional visibility rules
 - **QuestionOption** - Options for choice-based questions
+- **SurveyTemplate** - Reusable survey structure for cloning
 - **Campaign** - Survey distribution and lifecycle
 - **Response** - User submissions
 - **ResponseItem** - Individual question answers
@@ -398,14 +430,12 @@ For detailed architecture documentation, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 This MVP is designed for easy extension:
 
-- 🔀 Conditional logic (skip patterns based on answers)
-- 📄 Survey templates for reusability
 - 📧 Email campaign distribution
 - 📱 QR code generation for physical surveys
 - 👥 Team collaboration features
-- 📈 Advanced analytics with demographic filtering
+- 📈 Advanced analytics with demographic filtering and version comparisons
 - 📊 Real-time dashboards
-- 📥 Export to CSV/PDF
+- 🗂 File storage integration for uploads + PDF report generation on survey close
 - 🔍 Full-text search with Elasticsearch
 - 💾 Caching with Redis
 

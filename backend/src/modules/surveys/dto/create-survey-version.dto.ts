@@ -5,6 +5,7 @@ import {
   IsArray,
   ValidateNested,
   IsNotEmpty,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateQuestionDto } from './create-question.dto';
@@ -14,6 +15,11 @@ export class CreateSurveyVersionDto {
   @IsString()
   @IsOptional()
   changeLog?: string;
+
+  @ApiProperty({ example: true, required: false, description: 'Whether the new version should be active. Defaults to true.' })
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
 
   @ApiProperty({ type: [CreateQuestionDto] })
   @IsArray()

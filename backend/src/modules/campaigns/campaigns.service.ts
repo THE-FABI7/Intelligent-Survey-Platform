@@ -4,7 +4,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import {
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import { Campaign } from './entities/campaign.entity';
 import { SurveyVersion } from '../surveys/entities/survey-version.entity';
 import { CreateCampaignDto, UpdateCampaignDto } from './dto';
@@ -50,6 +54,20 @@ export class CampaignsService {
     return this.campaignRepository.find({
       relations: ['surveyVersion', 'surveyVersion.survey'],
       order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findAvailable(): Promise<Campaign[]> {
+    const now = new Date();
+
+    return this.campaignRepository.find({
+      where: {
+        status: CampaignStatus.PUBLISHED,
+        startDate: LessThanOrEqual(now),
+        endDate: MoreThanOrEqual(now),
+      },
+      relations: ['surveyVersion', 'surveyVersion.survey', 'surveyVersion.questions'],
+      order: { startDate: 'ASC' },
     });
   }
 

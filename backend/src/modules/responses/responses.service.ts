@@ -116,7 +116,7 @@ export class ResponsesService {
   ): Promise<Response> {
     const campaign = await this.campaignRepository.findOne({
       where: { id: submitResponseDto.campaignId },
-      relations: ['surveyVersion', 'surveyVersion.questions'],
+      relations: ['surveyVersion', 'surveyVersion.questions', 'surveyVersion.questions.options'],
     });
 
     if (!campaign) {

@@ -37,4 +37,19 @@ export class AnalyticsController {
   ) {
     return this.analyticsService.getQuestionAnalytics(campaignId, questionId);
   }
+
+  @Get('surveys/:surveyId/summary')
+  @ApiOperation({ summary: 'Get admin summary for a survey (campaigns, alerts, recent responses)' })
+  @ApiResponse({ status: 200, description: 'Survey summary' })
+  getSurveySummary(@Param('surveyId') surveyId: string) {
+    return this.analyticsService.getSurveySummary(surveyId);
+  }
+
+  @Get('campaigns/:campaignId/export')
+  @ApiOperation({ summary: 'Export campaign responses to CSV (Admin only)' })
+  @ApiResponse({ status: 200, description: 'CSV export' })
+  async exportCampaign(@Param('campaignId') campaignId: string) {
+    const csv = await this.analyticsService.exportCampaignCsv(campaignId);
+    return csv;
+  }
 }

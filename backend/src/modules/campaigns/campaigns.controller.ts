@@ -24,12 +24,12 @@ import { UserRole } from '@common/enums';
 
 @ApiTags('Campaigns')
 @Controller('campaigns')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth('JWT')
 export class CampaignsController {
   constructor(private readonly campaignsService: CampaignsService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('JWT')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new campaign (Admin only)' })
   @ApiResponse({ status: 201, description: 'Campaign created successfully' })
@@ -47,6 +47,13 @@ export class CampaignsController {
     return this.campaignsService.findAll();
   }
 
+  @Get('available')
+  @ApiOperation({ summary: 'Get active campaigns for respondents' })
+  @ApiResponse({ status: 200, description: 'List of active published campaigns' })
+  findAvailable() {
+    return this.campaignsService.findAvailable();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a campaign by ID' })
   @ApiResponse({ status: 200, description: 'Campaign details' })
@@ -56,6 +63,8 @@ export class CampaignsController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('JWT')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update a campaign (Admin only)' })
   @ApiResponse({ status: 200, description: 'Campaign updated successfully' })
@@ -67,6 +76,8 @@ export class CampaignsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('JWT')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete a campaign (Admin only)' })
   @ApiResponse({ status: 200, description: 'Campaign deleted successfully' })
@@ -75,6 +86,8 @@ export class CampaignsController {
   }
 
   @Post(':id/publish')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('JWT')
   @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Publish a campaign (Admin only)' })
@@ -84,6 +97,8 @@ export class CampaignsController {
   }
 
   @Post(':id/close')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('JWT')
   @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Close a campaign (Admin only)' })

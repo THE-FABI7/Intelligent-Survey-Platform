@@ -99,7 +99,10 @@ Separating user management from auth allows:
 - MULTIPLE_CHOICE - Single selection from options
 - CHECKBOX - Multiple selections
 - SCALE - Rating scale (1-10, etc.)
-- FILE_UPLOAD - File attachment
+- FILE_UPLOAD - File attachment metadata (storage integration next)
+
+**Visibility Rules**:
+- Optional per-question `visibility` config with operator/value/target question to support skip logic on the backend DTO.
 
 **Endpoints**:
 - `POST /surveys` - Create survey (Admin)
@@ -110,6 +113,10 @@ Separating user management from auth allows:
 - `POST /surveys/:id/versions` - Create new version (Admin)
 - `GET /surveys/:id/versions` - List versions
 - `GET /surveys/:id/versions/:versionId` - Get specific version
+- `GET /surveys/templates` - List templates
+- `GET /surveys/templates/:id` - Get template by id
+- `POST /surveys/templates` - Create template from an existing survey version (Admin)
+- `POST /surveys/:id/apply-template` - Clone a template into a survey (Admin)
 
 **Why Versioning?**
 Survey versioning is critical for:
@@ -173,16 +180,19 @@ Separating responses enables:
 ### Analytics Module
 **Purpose**: Provide insights and metrics on campaign performance.
 
-**MVP Metrics**:
-- **Total responses**: Count of submissions
-- **Completion rate**: Percentage of completed responses
-- **Average completion time**: Mean time to complete
-- **Authenticated vs anonymous**: Response breakdown
-- **Question analytics**: Answer distribution per question
+**Current Metrics**:
+- **Total responses** and **completion rate**
+- **Average completion time**
+- **Authenticated vs anonymous** breakdown
+- **Question analytics**: type-aware (options distribution, numeric stats + histogram, text top-words + basic sentiment)
+- **CSV export** per campaign
+- **Survey summary**: active/closed campaigns, alerts for campañas que cierran en <24h, respuestas recientes
 
 **Endpoints**:
 - `GET /analytics/campaigns/:campaignId` - Campaign metrics (Admin)
 - `GET /analytics/campaigns/:campaignId/questions/:questionId` - Question analytics (Admin)
+- `GET /analytics/surveys/:surveyId/summary` - Survey summary (Admin)
+- `GET /analytics/campaigns/:campaignId/export` - CSV export (Admin)
 
 **Why This Module?**
 Analytics as a separate module allows:
@@ -222,6 +232,9 @@ ResponseItem
 └── N:1 → Question
 ```
 
+**Templates**
+- `SurveyTemplate` stores a reusable survey version snapshot that can be cloned into new surveys without altering the source version.
+
 ### Key Design Decisions
 
 1. **Survey Versioning**: Each campaign links to a specific `SurveyVersion`, not the parent `Survey`. This ensures response integrity even if surveys are modified.
@@ -231,6 +244,10 @@ ResponseItem
 3. **Soft Relationships**: Responses can be anonymous (user is nullable), enabling public surveys.
 
 4. **Cascade Deletes**: Deleting surveys cascades to versions, questions, and options, maintaining referential integrity.
+
+5. **Template-first Workflow**: A `SurveyTemplate` captures a reusable version snapshot and can be applied to any survey to bootstrap questions and options.
+
+6. **Auto Initial Version**: Creating a survey seeds an initial version to keep analytics/version history consistent from the start.
 
 ---
 
@@ -264,31 +281,27 @@ ResponseItem
 This MVP architecture is designed for easy extension:
 
 ### 1. Advanced Survey Logic
-**Conditional Questions**: "If answer is X, show question Y"
-- Add `conditions` field to `Question` entity
-- Implement frontend logic to show/hide questions
-- Backend validates required questions based on conditions
+**Richer Visibility/Branching**: Extend current visibility rules to support compound conditions and dynamic ordering.
+- Add grouped conditions (AND/OR) and nested expressions
+- Add `nextQuestionId`/routing to enable true branching paths
+- Enforce conditional requiredness in validation layer
 
-**Question Branching**: Multi-path surveys
-- Add `nextQuestionId` to `QuestionOption`
-- Service layer determines question order dynamically
+**Dynamic Scoring/Computed Fields**
+- Allow derived values from answers for scoring or eligibility
+- Expose computed results in analytics
 
-**Templates**: Reusable survey structures
-- Add `SurveyTemplate` entity
-- Surveys can be created from templates
-
-### 2. Enhanced Analytics
-**Demographic Filtering**: "Show responses from users aged 18-25"
-- Extend `User` entity with demographic fields
-- Add query parameters to analytics endpoints
+### 2. Enhanced Analytics & Reporting
+**Demographic Filtering**: "Show responses from users aged 18-25" / por ciudad
+- Extender `User` con género/edad/ubicación y permitir filtros en analytics
 
 **Real-time Dashboards**: Live campaign monitoring
-- Implement WebSocket connections
-- Push updates when responses are submitted
+- WebSockets para métricas en vivo
 
-**Export**: Download reports in CSV/PDF
-- Add export endpoints with format parameter
-- Use libraries like `json2csv` or `pdfkit`
+**Reportes en PDF**
+- Generar reporte final al cerrar encuesta (PDF profesional listo para reunión)
+
+**Export**: CSV/Excel completos
+- Endpoint actual de CSV y agregar Excel
 
 ### 3. Multi-channel Distribution
 **Email Campaigns**: Send surveys via email
@@ -457,17 +470,20 @@ backend/
 ✅ Campaign lifecycle management
 ✅ Response submission (authenticated & anonymous)
 ✅ Basic analytics (completion rate, average time, totals)
+✅ Question analytics por tipo (distribuciones, histogramas, top palabras, sentimiento básico)
+✅ Export de respuestas a CSV
 ✅ Swagger API documentation
+✅ Survey templates and cloning
+✅ Question visibility rules (skip logic support)
 
 **What's Next** (Post-MVP):
-🔲 Conditional logic (skip patterns)
-🔲 Survey templates
 🔲 Advanced analytics (demographics, exports)
 🔲 Multi-channel distribution (email, QR)
 🔲 Real-time dashboards
 🔲 File upload handling
 🔲 Response editing
 🔲 Team collaboration
+🔲 Dedicated storage for uploaded files
 
 ---
 
