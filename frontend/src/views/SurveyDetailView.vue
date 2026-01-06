@@ -15,7 +15,7 @@
             </svg>
             Save as template
           </AppButton>
-          <AppButton variant="primary" @click="createVersion" :loading="savingVersion" :disabled="questions.length === 0">
+          <AppButton variant="primary" @click="createVersion" :loading="savingVersion" :disabled="questions.length === 0 || savingVersion">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
@@ -24,85 +24,47 @@
         </div>
       </div>
 
-      <!-- Versions list + preview -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <AppCard class="lg:col-span-2">
-          <template #header>
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-lg font-semibold text-white">Versions</h3>
-                <p class="text-sm text-gray-400">History of published versions</p>
-              </div>
-              <span class="text-sm text-gray-400">Total: {{ versions.length }}</span>
+      <!-- Versions list -->
+      <AppCard>
+        <template #header>
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-white">Versions</h3>
+              <p class="text-sm text-gray-400">History of published versions</p>
             </div>
-          </template>
-
-          <div v-if="loading" class="text-gray-400 py-6 text-center">Loading...</div>
-          <div v-else-if="versions.length === 0" class="text-gray-400 py-6 text-center">No versions yet. Create your first one below.</div>
-          <div v-else class="space-y-3">
-            <div
-              v-for="version in versions"
-              :key="version.id"
-              class="flex items-center justify-between bg-dark-900 rounded-lg px-4 py-3 border border-dark-700"
-            >
-              <div>
-                <p class="text-white font-medium flex items-center gap-2">
-                  <span>Version v{{ version.versionNumber }}</span>
-                  <span class="text-xs px-2 py-1 rounded bg-dark-700 text-gray-300">{{ version.questions?.length || 0 }} questions</span>
-                </p>
-                <p class="text-xs text-gray-400">{{ formatDate(version.createdAt) }}</p>
-              </div>
-              <div class="flex items-center gap-3 text-sm text-gray-200">
-                <button class="text-primary-400 hover:text-primary-300" @click="previewVersion(version)">
-                  View
-                </button>
-                <button class="text-primary-400 hover:text-primary-300" @click="loadVersionIntoBuilder(version)">
-                  Load in builder
-                </button>
-              </div>
-            </div>
+            <span class="text-sm text-gray-400">Total: {{ versions.length }}</span>
           </div>
-        </AppCard>
+        </template>
 
-        <AppCard>
-          <template #header>
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-lg font-semibold text-white">Version preview</h3>
-                <p class="text-sm text-gray-400">Selected version questions</p>
-              </div>
-              <span v-if="selectedVersion" class="text-xs text-gray-400">v{{ selectedVersion.versionNumber }}</span>
-            </div>
-          </template>
-
-          <div v-if="!selectedVersion" class="text-sm text-gray-500 py-6 text-center">Select a version to preview.</div>
-          <div v-else class="space-y-3">
-            <div class="flex items-center justify-between text-xs text-gray-400">
-              <span>{{ selectedVersion.questions?.length || 0 }} questions</span>
-              <button class="text-primary-400 hover:text-primary-300" @click="loadVersionIntoBuilder(selectedVersion)">Load in builder</button>
-            </div>
-            <div
-              v-for="(q, idx) in selectedVersion.questions || []"
-              :key="q.id || idx"
-              class="border border-dark-700 rounded-lg p-3 bg-dark-900"
-            >
-              <div class="flex items-center justify-between">
-                <p class="text-white font-medium">{{ idx + 1 }}. {{ q.text }}</p>
-                <span class="text-xs px-2 py-1 rounded bg-dark-800 text-gray-300">{{ q.type }}</span>
-              </div>
-              <p class="text-xs text-gray-400 mt-1">
-                {{ q.required ? 'Required' : 'Optional' }} · Code: {{ q.code || 'n/a' }}
+        <div v-if="loading" class="text-gray-400 py-6 text-center">Loading...</div>
+        <div v-else-if="versions.length === 0" class="text-gray-400 py-6 text-center">No versions yet. Create your first one below.</div>
+        <div v-else class="space-y-3">
+          <div
+            v-for="version in versions"
+            :key="version.id"
+            :class="[
+              'flex items-center justify-between bg-dark-900 rounded-lg px-4 py-3 border transition-colors',
+              selectedVersionId === version.id ? 'border-primary-500/50 bg-dark-800' : 'border-dark-700'
+            ]"
+          >
+            <div>
+              <p class="text-white font-medium">Version v{{ version.versionNumber }}</p>
+              <p class="text-xs text-gray-400">{{ formatDate(version.createdAt) }}</p>
+              <p class="text-xs" :class="version.isActive ? 'text-green-400' : 'text-gray-500'">
+                {{ version.isActive ? 'Active' : 'Inactive' }}
               </p>
-              <div v-if="q.options && q.options.length" class="mt-2 text-xs text-gray-300 space-y-1">
-                <p class="text-gray-400">Options:</p>
-                <ul class="list-disc list-inside space-y-1">
-                  <li v-for="opt in q.options" :key="opt.id">{{ opt.text }} <span class="text-gray-500">({{ opt.value || opt.text }})</span></li>
-                </ul>
-              </div>
+            </div>
+            <div class="text-sm text-gray-400">
+              {{ version.changeLog || 'No changelog' }}
+            </div>
+            <div class="flex items-center gap-2">
+              <AppButton size="sm" variant="secondary" @click="loadVersionQuestions(version)">
+                Load & edit
+              </AppButton>
             </div>
           </div>
-        </AppCard>
-      </div>
+        </div>
+      </AppCard>
 
       <!-- Builder -->
       <AppCard>
@@ -285,6 +247,7 @@ import type {
   CreateSurveyVersionDto,
   CreateQuestionDto,
   VisibilityOperator,
+  SurveyTemplate,
 } from '@/types'
 
 const route = useRoute()
@@ -292,7 +255,7 @@ const surveyId = computed(() => route.params.id as string)
 
 const survey = ref<Survey | null>(null)
 const versions = ref<SurveyVersion[]>([])
-const selectedVersionId = ref<string | null>(null)
+const selectedVersionId = ref<string>('')
 const loading = ref(true)
 const savingVersion = ref(false)
 const savingTemplate = ref(false)
@@ -324,10 +287,6 @@ const formatDate = (date: string) => {
   })
 }
 
-const selectedVersion = computed(() =>
-  versions.value.find((v) => v.id === selectedVersionId.value) || versions.value[0] || null,
-)
-
 const priorQuestions = (idx: number) => {
   return questions.value
     .slice(0, idx)
@@ -347,25 +306,6 @@ const addQuestion = () => {
     options: [],
     visibilityConditions: [],
   })
-}
-
-const mapVersionToBuilder = (version: SurveyVersion) => {
-  questions.value = (version.questions || []).map((q) => ({
-    localId: crypto.randomUUID(),
-    text: q.text,
-    type: q.type,
-    code: q.code,
-    required: q.required,
-    orderIndex: q.orderIndex,
-    validationRules: q.validationRules || {},
-    options: (q.options || []).map((opt) => ({
-      localId: crypto.randomUUID(),
-      text: opt.text,
-      value: opt.value,
-      orderIndex: opt.orderIndex,
-    })),
-    visibilityConditions: q.visibilityConditions || [],
-  }))
 }
 
 const removeQuestion = (idx: number) => {
@@ -439,6 +379,7 @@ const normalizeQuestions = (): CreateQuestionDto[] => {
 }
 
 const createVersion = async () => {
+  if (savingVersion.value) return
   try {
     savingVersion.value = true
     const payload: CreateSurveyVersionDto = {
@@ -448,6 +389,7 @@ const createVersion = async () => {
     }
     const version = await surveyService.createVersion(surveyId.value, payload)
     versions.value = [version, ...versions.value]
+    loadVersionQuestions(version)
   } catch (error) {
     console.error('Failed to create version', error)
     alert('Failed to create version. Check required fields and logic references.')
@@ -479,10 +421,13 @@ const loadSurvey = async () => {
     loading.value = true
     const data = await surveyService.getById(surveyId.value)
     survey.value = data
-    versions.value = [...(data.versions || [])].sort((a, b) => b.versionNumber - a.versionNumber)
-    if (versions.value.length > 0) {
-      selectedVersionId.value = versions.value[0].id
-      mapVersionToBuilder(versions.value[0])
+    versions.value = data.versions || []
+
+    const pick = versions.value.find((v) => v.isActive) || versions.value[0]
+    if (pick) {
+      loadVersionQuestions(pick)
+    } else {
+      questions.value = []
     }
   } catch (error) {
     console.error('Failed to load survey', error)
@@ -491,13 +436,36 @@ const loadSurvey = async () => {
   }
 }
 
-const previewVersion = (version: SurveyVersion) => {
-  selectedVersionId.value = version.id
+const mapVersionQuestions = (version: SurveyVersion) => {
+  const qs = version.questions || []
+  return qs
+    .slice()
+    .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+    .map((q, idx) => ({
+      localId: crypto.randomUUID(),
+      text: q.text,
+      type: q.type,
+      code: q.code || `q${idx + 1}`,
+      required: q.required ?? false,
+      orderIndex: q.orderIndex ?? idx + 1,
+      validationRules: q.validationRules || {},
+      options: (q.options || []).map((opt, oIdx) => ({
+        localId: crypto.randomUUID(),
+        text: opt.text,
+        value: opt.value || opt.text,
+        orderIndex: opt.orderIndex ?? oIdx + 1,
+      })),
+      visibilityConditions: q.visibilityConditions || [],
+    }))
 }
 
-const loadVersionIntoBuilder = (version: SurveyVersion) => {
+const loadVersionQuestions = (version: SurveyVersion) => {
   selectedVersionId.value = version.id
-  mapVersionToBuilder(version)
+  if (!version.questions || version.questions.length === 0) {
+    questions.value = []
+    return
+  }
+  questions.value = mapVersionQuestions(version)
 }
 
 onMounted(() => {

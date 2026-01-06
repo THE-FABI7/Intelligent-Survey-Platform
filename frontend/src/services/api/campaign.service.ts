@@ -17,6 +17,11 @@ export const campaignService = {
     return response.data
   },
 
+  async getPublicById(id: string): Promise<Campaign> {
+    const response = await http.get<Campaign>(`/campaigns/public/${id}`)
+    return response.data
+  },
+
   async create(data: CreateCampaignDto): Promise<Campaign> {
     const response = await http.post<Campaign>('/campaigns', data)
     return response.data

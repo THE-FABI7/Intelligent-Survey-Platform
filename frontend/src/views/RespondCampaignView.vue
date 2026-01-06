@@ -180,7 +180,7 @@ const submit = async () => {
 const loadCampaign = async () => {
   try {
     loading.value = true
-    const data = await campaignService.getById(campaignId)
+    const data = await campaignService.getPublicById(campaignId)
     campaign.value = data
   } catch (error) {
     console.error('Failed to load campaign', error)

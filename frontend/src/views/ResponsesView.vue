@@ -33,7 +33,7 @@
           :columns="[
             { key: 'id', label: 'Response ID' },
             { key: 'respondent', label: 'Respondent' },
-            { key: 'duration', label: 'Time (s)' },
+            { key: 'status', label: 'Status' },
             { key: 'createdAt', label: 'Submitted' },
           ]"
           :data="responses"
@@ -46,12 +46,12 @@
 
           <template #cell-respondent="{ row }">
             <span class="text-gray-300">
-              {{ row.user?.email || row.anonymousId || 'Anonymous' }}
+              {{ row.user?.email || 'Anonymous' }}
             </span>
           </template>
 
-          <template #cell-duration="{ row }">
-            <span class="text-gray-300">{{ row.completionTimeSeconds ?? '—' }}</span>
+          <template #cell-status="{ row }">
+            <AppTag :status="row.completedAt ? 'COMPLETED' : 'IN_PROGRESS'" />
           </template>
 
           <template #cell-createdAt="{ row }">
@@ -99,15 +99,17 @@
             </div>
             <div>
               <p class="text-sm text-gray-400">Respondent</p>
-              <p class="text-white mt-1">{{ selectedResponse.user?.email || selectedResponse.anonymousId || 'Anonymous' }}</p>
+              <p class="text-white mt-1">{{ selectedResponse.user?.email || 'Anonymous' }}</p>
             </div>
             <div>
-              <p class="text-sm text-gray-400">Started</p>
-              <p class="text-white mt-1">{{ formatDate(selectedResponse.startedAt) }}</p>
+              <p class="text-sm text-gray-400">Status</p>
+              <div class="mt-1">
+                <AppTag :status="selectedResponse.completedAt ? 'COMPLETED' : 'IN_PROGRESS'" />
+              </div>
             </div>
             <div>
               <p class="text-sm text-gray-400">Submitted</p>
-              <p class="text-white mt-1">{{ formatDate(selectedResponse.completedAt || selectedResponse.createdAt) }}</p>
+              <p class="text-white mt-1">{{ formatDate(selectedResponse.createdAt) }}</p>
             </div>
           </div>
 
@@ -118,13 +120,13 @@
             </div>
             <div v-else class="space-y-4">
               <div
-                v-for="item in selectedResponse.items"
-                :key="item.id"
+                v-for="answer in selectedResponse.items"
+                :key="answer.id"
                 class="p-4 bg-dark-900 rounded-lg"
               >
-                <p class="text-white font-medium mb-2">{{ item.question?.text }}</p>
-                <p class="text-sm text-gray-400 mb-2">Type: {{ item.question?.type }}</p>
-                <p class="text-gray-300 break-words">{{ formatValue(item.value) }}</p>
+                <p class="text-white font-medium mb-2">{{ answer.question.text }}</p>
+                <p class="text-sm text-gray-400 mb-2">Type: {{ answer.question.type }}</p>
+                <p class="text-gray-300">{{ formatAnswer(answer.value) }}</p>
               </div>
             </div>
           </div>
@@ -153,7 +155,8 @@ const responses = ref<Response[]>([])
 const selectedResponse = ref<Response | null>(null)
 const loading = ref(true)
 
-const formatDate = (date: string) => {
+const formatDate = (date?: string) => {
+  if (!date) return '—'
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -163,15 +166,15 @@ const formatDate = (date: string) => {
   })
 }
 
-const viewResponse = (response: Response) => {
-  selectedResponse.value = response
+const formatAnswer = (value: any) => {
+  if (value === null || value === undefined) return 'No answer'
+  if (Array.isArray(value)) return value.join(', ')
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
 }
 
-const formatValue = (val: any) => {
-  if (Array.isArray(val)) return val.join(', ')
-  if (val === null || val === undefined) return '—'
-  if (typeof val === 'object') return JSON.stringify(val)
-  return String(val)
+const viewResponse = (response: Response) => {
+  selectedResponse.value = response
 }
 
 const loadData = async () => {
@@ -179,12 +182,12 @@ const loadData = async () => {
     loading.value = true
     
     // Load campaign details
-    const campaignResponse = await campaignService.getOne(campaignId)
-    campaign.value = campaignResponse.data
+    const campaignResponse = await campaignService.getById(campaignId)
+    campaign.value = campaignResponse
     
     // Load responses
     const responsesData = await responseService.getByCampaign(campaignId)
-    responses.value = responsesData.data
+    responses.value = responsesData
   } catch (error) {
     console.error('Failed to load responses:', error)
   } finally {
