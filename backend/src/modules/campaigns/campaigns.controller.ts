@@ -62,6 +62,15 @@ export class CampaignsController {
     return this.campaignsService.findOne(id);
   }
 
+  @Get('public/:id')
+  @ApiOperation({ summary: 'Get a published & active campaign (respondents)' })
+  @ApiResponse({ status: 200, description: 'Campaign details' })
+  @ApiResponse({ status: 400, description: 'Campaign not active/published' })
+  @ApiResponse({ status: 404, description: 'Campaign not found' })
+  findPublic(@Param('id') id: string) {
+    return this.campaignsService.findPublicById(id);
+  }
+
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('JWT')

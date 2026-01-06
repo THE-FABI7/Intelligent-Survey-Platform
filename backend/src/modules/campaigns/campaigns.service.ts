@@ -89,6 +89,21 @@ export class CampaignsService {
     return campaign;
   }
 
+  async findPublicById(id: string): Promise<Campaign> {
+    const campaign = await this.findOne(id);
+
+    if (campaign.status !== CampaignStatus.PUBLISHED) {
+      throw new BadRequestException('Campaign is not published');
+    }
+
+    const now = new Date();
+    if (now < campaign.startDate || now > campaign.endDate) {
+      throw new BadRequestException('Campaign is not active');
+    }
+
+    return campaign;
+  }
+
   async update(
     id: string,
     updateCampaignDto: UpdateCampaignDto,

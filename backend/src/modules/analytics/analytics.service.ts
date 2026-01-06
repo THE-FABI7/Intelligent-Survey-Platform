@@ -262,7 +262,7 @@ export class AnalyticsService {
         const value = typeof item.value === 'object' ? JSON.stringify(item.value) : item.value;
         rows.push([
           r.id,
-          item.question?.id || '',
+          item.question?.id,
           `"${item.question?.text?.replace(/"/g, '""') || ''}"`,
           `"${String(value ?? '').replace(/"/g, '""')}"`,
           r.createdAt.toISOString(),
