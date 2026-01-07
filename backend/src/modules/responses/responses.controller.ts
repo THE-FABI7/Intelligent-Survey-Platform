@@ -24,13 +24,16 @@ export class ResponsesController {
   constructor(private readonly responsesService: ResponsesService) {}
 
   @Post('submit')
-  @ApiOperation({ summary: 'Submit a response to a campaign (public or authenticated)' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.RESPONDENT)
+  @ApiBearerAuth('JWT')
+  @ApiOperation({ summary: 'Submit a response to a campaign (respondents only)' })
   @ApiResponse({ status: 201, description: 'Response submitted successfully' })
   async submit(
     @Body() submitResponseDto: SubmitResponseDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user: any,
   ) {
-    return this.responsesService.submit(submitResponseDto, user?.id);
+    return this.responsesService.submit(submitResponseDto, user.id);
   }
 
   @Get()

@@ -7,6 +7,16 @@ export const campaignService = {
     return response.data
   },
 
+  async getAvailable(): Promise<Campaign[]> {
+    const response = await http.get<Campaign[]>('/campaigns/available')
+    return response.data
+  },
+
+  async getPublicById(id: string): Promise<Campaign> {
+    const response = await http.get<Campaign>(`/campaigns/public/${id}`)
+    return response.data
+  },
+
   async getById(id: string): Promise<Campaign> {
     const response = await http.get<Campaign>(`/campaigns/${id}`)
     return response.data

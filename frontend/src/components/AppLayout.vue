@@ -115,31 +115,23 @@ const route = useRoute()
 const sidebarOpen = ref(false)
 const user = ref(authService.getCurrentUser())
 
-const navigation = [
-  {
-    name: 'Dashboard',
-    href: '/dashboard',
-    icon: 'IconDashboard',
-  },
-  {
-    name: 'Surveys',
-    href: '/surveys',
-    icon: 'IconSurveys',
-  },
-  {
-    name: 'Campaigns',
-    href: '/campaigns',
-    icon: 'IconCampaigns',
-  },
-  {
-    name: 'Analytics',
-    href: '/analytics',
-    icon: 'IconAnalytics',
-  },
+const adminNavigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: 'IconDashboard' },
+  { name: 'Surveys', href: '/surveys', icon: 'IconSurveys' },
+  { name: 'Campaigns', href: '/campaigns', icon: 'IconCampaigns' },
+  { name: 'Analytics', href: '/analytics', icon: 'IconAnalytics' },
 ]
 
+const respondentNavigation = [
+  { name: 'Encuestas', href: '/respondent', icon: 'IconSurveys' },
+]
+
+const navigation = computed(() =>
+  user.value?.role === 'ADMIN' ? adminNavigation : respondentNavigation,
+)
+
 const pageTitle = computed(() => {
-  const item = navigation.find(item => route.path.startsWith(item.href))
+  const item = navigation.value.find(item => route.path.startsWith(item.href))
   return item?.name || 'Survey Platform'
 })
 

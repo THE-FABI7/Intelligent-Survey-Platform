@@ -168,10 +168,11 @@ const submit = async () => {
       anonymousId: crypto.randomUUID(),
       items,
     })
-    alert('Response submitted. Thank you!')
+    alert('Respuesta enviada. ¡Gracias por participar!')
   } catch (error) {
     console.error('Failed to submit response', error)
-    alert('Could not submit response. Please check required answers.')
+    const message = (error as any)?.response?.data?.message || 'No se pudo enviar la respuesta. Verifica tus datos.'
+    alert(message)
   } finally {
     submitting.value = false
   }

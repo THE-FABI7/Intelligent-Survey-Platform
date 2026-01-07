@@ -1,5 +1,5 @@
 import http from './http'
-import { Response } from './types'
+import { Response, SubmitResponsePayload } from './types'
 
 export const responseService = {
   async getAll(): Promise<Response[]> {
@@ -14,6 +14,11 @@ export const responseService = {
 
   async getByCampaign(campaignId: string): Promise<Response[]> {
     const response = await http.get<Response[]>(`/responses/campaign/${campaignId}`)
+    return response.data
+  },
+
+  async submit(payload: SubmitResponsePayload): Promise<Response> {
+    const response = await http.post<Response>('/responses/submit', payload)
     return response.data
   },
 }

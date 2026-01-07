@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -112,8 +113,12 @@ export class ResponsesService {
 
   async submit(
     submitResponseDto: SubmitResponseDto,
-    userId?: string,
+    userId: string,
   ): Promise<Response> {
+    if (!userId) {
+      throw new UnauthorizedException('User authentication required to submit responses');
+    }
+
     const campaign = await this.campaignRepository.findOne({
       where: { id: submitResponseDto.campaignId },
       relations: ['surveyVersion', 'surveyVersion.questions', 'surveyVersion.questions.options'],
@@ -127,6 +132,17 @@ export class ResponsesService {
 
     if (campaign.status !== CampaignStatus.PUBLISHED) {
       throw new BadRequestException('Campaign is not published');
+    }
+
+    const existingResponse = await this.responseRepository.findOne({
+      where: {
+        campaign: { id: submitResponseDto.campaignId },
+        user: { id: userId },
+      },
+    });
+
+    if (existingResponse) {
+      throw new BadRequestException('You have already submitted a response for this campaign');
     }
 
     const now = new Date();
@@ -190,7 +206,7 @@ export class ResponsesService {
     const startedAt = new Date();
     const response = this.responseRepository.create({
       campaign,
-      user: userId ? ({ id: userId } as any) : null,
+      user: { id: userId } as any,
       anonymousId: submitResponseDto.anonymousId,
       startedAt,
       completedAt: new Date(),

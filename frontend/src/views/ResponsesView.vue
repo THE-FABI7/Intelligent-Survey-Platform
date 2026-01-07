@@ -33,8 +33,8 @@
           :columns="[
             { key: 'id', label: 'Response ID' },
             { key: 'respondent', label: 'Respondent' },
-            { key: 'status', label: 'Status' },
-            { key: 'createdAt', label: 'Submitted' },
+            { key: 'completedAt', label: 'Submitted' },
+            { key: 'actions', label: 'Actions' },
           ]"
           :data="responses"
         >
@@ -46,16 +46,12 @@
 
           <template #cell-respondent="{ row }">
             <span class="text-gray-300">
-              {{ row.respondent?.email || 'Anonymous' }}
+              {{ row.user?.email || 'Anonymous' }}
             </span>
           </template>
 
-          <template #cell-status="{ row }">
-            <AppTag :status="row.isCompleted ? 'COMPLETED' : 'IN_PROGRESS'" />
-          </template>
-
-          <template #cell-createdAt="{ row }">
-            {{ formatDate(row.createdAt) }}
+          <template #cell-completedAt="{ row }">
+            {{ formatDate(row.completedAt || row.createdAt) }}
           </template>
 
           <template #actions="{ row }">
@@ -63,7 +59,7 @@
               @click="viewResponse(row)"
               class="text-sm text-primary-400 hover:text-primary-300"
             >
-              View Details
+              View response
             </button>
           </template>
         </AppTable>
@@ -99,34 +95,28 @@
             </div>
             <div>
               <p class="text-sm text-gray-400">Respondent</p>
-              <p class="text-white mt-1">{{ selectedResponse.respondent?.email || 'Anonymous' }}</p>
-            </div>
-            <div>
-              <p class="text-sm text-gray-400">Status</p>
-              <div class="mt-1">
-                <AppTag :status="selectedResponse.isCompleted ? 'COMPLETED' : 'IN_PROGRESS'" />
-              </div>
+              <p class="text-white mt-1">{{ selectedResponse.user?.email || 'Anonymous' }}</p>
             </div>
             <div>
               <p class="text-sm text-gray-400">Submitted</p>
-              <p class="text-white mt-1">{{ formatDate(selectedResponse.createdAt) }}</p>
+              <p class="text-white mt-1">{{ formatDate(selectedResponse.completedAt || selectedResponse.createdAt) }}</p>
             </div>
           </div>
 
           <div>
             <h4 class="text-white font-medium mb-4">Answers</h4>
-            <div v-if="selectedResponse.answers.length === 0" class="text-center py-8 text-gray-400">
+            <div v-if="selectedResponse.items.length === 0" class="text-center py-8 text-gray-400">
               No answers submitted yet
             </div>
             <div v-else class="space-y-4">
               <div
-                v-for="answer in selectedResponse.answers"
-                :key="answer.id"
+                v-for="item in selectedResponse.items"
+                :key="item.id"
                 class="p-4 bg-dark-900 rounded-lg"
               >
-                <p class="text-white font-medium mb-2">{{ answer.question.text }}</p>
-                <p class="text-sm text-gray-400 mb-2">Type: {{ answer.question.type }}</p>
-                <p class="text-gray-300">{{ answer.answerText || answer.answerNumber || 'No answer' }}</p>
+                <p class="text-white font-medium mb-2">{{ item.question?.text || 'Question' }}</p>
+                <p class="text-sm text-gray-400 mb-2">Type: {{ item.question?.type }}</p>
+                <p class="text-gray-300 break-words">{{ formatValue(item.value) }}</p>
               </div>
             </div>
           </div>
@@ -165,6 +155,13 @@ const formatDate = (date: string) => {
   })
 }
 
+const formatValue = (value: any) => {
+  if (value === null || value === undefined) return 'Sin respuesta'
+  if (Array.isArray(value)) return value.join(', ')
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
+
 const viewResponse = (response: Response) => {
   selectedResponse.value = response
 }
@@ -173,13 +170,8 @@ const loadData = async () => {
   try {
     loading.value = true
     
-    // Load campaign details
-    const campaignResponse = await campaignService.getOne(campaignId)
-    campaign.value = campaignResponse.data
-    
-    // Load responses
-    const responsesData = await responseService.getByCampaign(campaignId)
-    responses.value = responsesData.data
+    campaign.value = await campaignService.getById(campaignId)
+    responses.value = await responseService.getByCampaign(campaignId)
   } catch (error) {
     console.error('Failed to load responses:', error)
   } finally {

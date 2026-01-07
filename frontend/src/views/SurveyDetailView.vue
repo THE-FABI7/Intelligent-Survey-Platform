@@ -39,6 +39,22 @@
         <div v-if="loading" class="text-gray-400 py-6 text-center">Loading...</div>
         <div v-else-if="versions.length === 0" class="text-gray-400 py-6 text-center">No versions yet. Create your first one below.</div>
         <div v-else class="space-y-3">
+          <div class="flex items-center gap-3">
+            <select
+              v-model="selectedVersionId"
+              class="px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white"
+            >
+              <option disabled value="">Select a version</option>
+              <option v-for="version in versions" :key="version.id" :value="version.id">
+                v{{ version.versionNumber }} · {{ formatDate(version.createdAt) }}
+              </option>
+            </select>
+            <AppButton variant="secondary" :loading="loadingVersion" :disabled="!selectedVersionId" @click="loadVersion(selectedVersionId!)">
+              Load version
+            </AppButton>
+            <AppButton variant="ghost" @click="startBlank">Start blank</AppButton>
+          </div>
+
           <div
             v-for="version in versions"
             :key="version.id"
@@ -245,10 +261,12 @@ const surveyId = computed(() => route.params.id as string)
 const survey = ref<Survey | null>(null)
 const versions = ref<SurveyVersion[]>([])
 const loading = ref(true)
+const loadingVersion = ref(false)
 const savingVersion = ref(false)
 const savingTemplate = ref(false)
 const questions = ref<Array<CreateQuestionDto & { localId: string; options?: any[] }>>([])
 const fileExtensions = reactive<Record<string, string>>({})
+const selectedVersionId = ref<string>('')
 
 const operators: VisibilityOperator[] = [
   'EQUALS',
@@ -375,7 +393,9 @@ const createVersion = async () => {
       questions: normalizeQuestions(),
     }
     const version = await surveyService.createVersion(surveyId.value, payload)
-    versions.value = [version, ...versions.value]
+    await refreshVersions()
+    selectedVersionId.value = version.id
+    await loadVersion(version.id)
   } catch (error) {
     console.error('Failed to create version', error)
     alert('Failed to create version. Check required fields and logic references.')
@@ -408,10 +428,73 @@ const loadSurvey = async () => {
     const data = await surveyService.getById(surveyId.value)
     survey.value = data
     versions.value = data.versions || []
+    selectedVersionId.value = versions.value[0]?.id || ''
+    if (selectedVersionId.value) {
+      await loadVersion(selectedVersionId.value)
+    } else {
+      startBlank()
+    }
   } catch (error) {
     console.error('Failed to load survey', error)
   } finally {
     loading.value = false
+  }
+}
+
+const refreshVersions = async () => {
+  versions.value = await surveyService.getVersions(surveyId.value)
+}
+
+const startBlank = () => {
+  questions.value = []
+  selectedVersionId.value = ''
+  Object.keys(fileExtensions).forEach((k) => delete fileExtensions[k])
+}
+
+const loadVersion = async (versionId: string) => {
+  if (!versionId) return
+  try {
+    loadingVersion.value = true
+    const version = await surveyService.getVersion(surveyId.value, versionId)
+    selectedVersionId.value = versionId
+
+    const seen = new Set<string>()
+    const ordered = [...(version.questions || [])]
+      .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+      .filter((q) => {
+        if (seen.has(q.id)) return false
+        seen.add(q.id)
+        return true
+      })
+
+    questions.value = ordered.map((q, idx) => ({
+      localId: crypto.randomUUID(),
+      text: q.text,
+      type: q.type,
+      code: q.code,
+      required: q.required,
+      orderIndex: q.orderIndex ?? idx + 1,
+      validationRules: q.validationRules || {},
+      options: (q.options || []).map((opt: any, oIdx: number) => ({
+        localId: crypto.randomUUID(),
+        text: opt.text,
+        value: opt.value,
+        orderIndex: opt.orderIndex ?? oIdx + 1,
+      })),
+      visibilityConditions: q.visibilityConditions || [],
+    }))
+
+    // hydrate file extensions helper map
+    questions.value.forEach((q) => {
+      if (q.type === 'FILE_UPLOAD' && q.validationRules?.allowedExtensions) {
+        fileExtensions[q.localId] = (q.validationRules.allowedExtensions as string[]).join(',')
+      }
+    })
+  } catch (error) {
+    console.error('Failed to load version', error)
+    alert('Could not load version details')
+  } finally {
+    loadingVersion.value = false
   }
 }
 

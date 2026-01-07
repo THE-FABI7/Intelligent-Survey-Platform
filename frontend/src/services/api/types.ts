@@ -92,19 +92,32 @@ export interface Campaign {
 
 export interface Response {
   id: string
-  campaignId: string
-  userId?: string
+  campaign?: Campaign
+  user?: User | null
   anonymousId?: string
   startedAt: string
   completedAt: string
   completionTimeSeconds: number
+  createdAt?: string
   items: ResponseItem[]
+}
+
+export interface SubmitResponseItem {
+  questionId: string
+  value: any
+}
+
+export interface SubmitResponsePayload {
+  campaignId: string
+  anonymousId?: string
+  items: SubmitResponseItem[]
 }
 
 export interface ResponseItem {
   id: string
   questionId: string
   value: any
+  question?: Question
 }
 
 export interface CampaignMetrics {
