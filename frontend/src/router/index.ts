@@ -4,11 +4,7 @@ import { authService } from '@/services/api'
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: () => {
-      const user = authService.getCurrentUser()
-      if (user?.role === 'RESPONDENT') return '/respondent'
-      return '/dashboard'
-    },
+    redirect: '/dashboard',
   },
   {
     path: '/login',
@@ -20,61 +16,49 @@ const routes: RouteRecordRaw[] = [
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('@/views/DashboardView.vue'),
-    meta: { requiresAuth: true, requiresRole: 'ADMIN' },
+    meta: { requiresAuth: true },
   },
   {
     path: '/surveys',
     name: 'Surveys',
     component: () => import('@/views/SurveysView.vue'),
-    meta: { requiresAuth: true, requiresRole: 'ADMIN' },
+    meta: { requiresAuth: true },
   },
   {
     path: '/surveys/:id',
     name: 'SurveyDetail',
     component: () => import('@/views/SurveyDetailView.vue'),
-    meta: { requiresAuth: true, requiresRole: 'ADMIN' },
+    meta: { requiresAuth: true },
   },
   {
     path: '/campaigns',
     name: 'Campaigns',
     component: () => import('@/views/CampaignsView.vue'),
-    meta: { requiresAuth: true, requiresRole: 'ADMIN' },
+    meta: { requiresAuth: true },
   },
   {
     path: '/campaigns/:id',
     name: 'CampaignDetail',
     component: () => import('@/views/CampaignDetailView.vue'),
-    meta: { requiresAuth: true, requiresRole: 'ADMIN' },
+    meta: { requiresAuth: true },
   },
   {
     path: '/analytics',
     name: 'AnalyticsList',
     component: () => import('@/views/AnalyticsListView.vue'),
-    meta: { requiresAuth: true, requiresRole: 'ADMIN' },
+    meta: { requiresAuth: true },
   },
   {
     path: '/analytics/:campaignId',
     name: 'Analytics',
     component: () => import('@/views/AnalyticsView.vue'),
-    meta: { requiresAuth: true, requiresRole: 'ADMIN' },
+    meta: { requiresAuth: true },
   },
   {
     path: '/responses/:campaignId',
     name: 'Responses',
     component: () => import('@/views/ResponsesView.vue'),
-    meta: { requiresAuth: true, requiresRole: 'ADMIN' },
-  },
-  {
-    path: '/respondent',
-    name: 'RespondentHome',
-    component: () => import('@/views/RespondentHomeView.vue'),
-    meta: { requiresAuth: true, requiresRole: 'RESPONDENT' },
-  },
-  {
-    path: '/respond/:campaignId',
-    name: 'RespondCampaign',
-    component: () => import('@/views/RespondCampaignView.vue'),
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
 ]
 
@@ -86,34 +70,15 @@ const router = createRouter({
 // Navigation guard
 router.beforeEach((to, from, next) => {
   const isAuthenticated = authService.isAuthenticated()
-  const user = authService.getCurrentUser()
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth !== false)
-  const requiredRole = to.matched.find(record => record.meta?.requiresRole)?.meta?.requiresRole as string | undefined
 
   if (requiresAuth && !isAuthenticated) {
     next('/login')
-    return
+  } else if (to.path === '/login' && isAuthenticated) {
+    next('/dashboard')
+  } else {
+    next()
   }
-
-  if (to.path === '/login' && isAuthenticated) {
-    next(user?.role === 'RESPONDENT' ? '/respondent' : '/dashboard')
-    return
-  }
-
-  if (requiredRole && user?.role !== requiredRole) {
-    if (user?.role === 'RESPONDENT') {
-      next('/respondent')
-      return
-    }
-    if (user?.role === 'ADMIN') {
-      next('/dashboard')
-      return
-    }
-    next('/login')
-    return
-  }
-
-  next()
 })
 
 export default router

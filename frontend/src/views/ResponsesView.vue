@@ -46,12 +46,12 @@
 
           <template #cell-respondent="{ row }">
             <span class="text-gray-300">
-              {{ row.user?.email || 'Anonymous' }}
+              {{ row.respondent?.email || 'Anonymous' }}
             </span>
           </template>
 
           <template #cell-status="{ row }">
-            <AppTag :status="row.completedAt ? 'COMPLETED' : 'IN_PROGRESS'" />
+            <AppTag :status="row.isCompleted ? 'COMPLETED' : 'IN_PROGRESS'" />
           </template>
 
           <template #cell-createdAt="{ row }">
@@ -99,12 +99,12 @@
             </div>
             <div>
               <p class="text-sm text-gray-400">Respondent</p>
-              <p class="text-white mt-1">{{ selectedResponse.user?.email || 'Anonymous' }}</p>
+              <p class="text-white mt-1">{{ selectedResponse.respondent?.email || 'Anonymous' }}</p>
             </div>
             <div>
               <p class="text-sm text-gray-400">Status</p>
               <div class="mt-1">
-                <AppTag :status="selectedResponse.completedAt ? 'COMPLETED' : 'IN_PROGRESS'" />
+                <AppTag :status="selectedResponse.isCompleted ? 'COMPLETED' : 'IN_PROGRESS'" />
               </div>
             </div>
             <div>
@@ -115,18 +115,18 @@
 
           <div>
             <h4 class="text-white font-medium mb-4">Answers</h4>
-            <div v-if="selectedResponse.items.length === 0" class="text-center py-8 text-gray-400">
+            <div v-if="selectedResponse.answers.length === 0" class="text-center py-8 text-gray-400">
               No answers submitted yet
             </div>
             <div v-else class="space-y-4">
               <div
-                v-for="answer in selectedResponse.items"
+                v-for="answer in selectedResponse.answers"
                 :key="answer.id"
                 class="p-4 bg-dark-900 rounded-lg"
               >
                 <p class="text-white font-medium mb-2">{{ answer.question.text }}</p>
                 <p class="text-sm text-gray-400 mb-2">Type: {{ answer.question.type }}</p>
-                <p class="text-gray-300">{{ formatAnswer(answer.value) }}</p>
+                <p class="text-gray-300">{{ answer.answerText || answer.answerNumber || 'No answer' }}</p>
               </div>
             </div>
           </div>
@@ -155,8 +155,7 @@ const responses = ref<Response[]>([])
 const selectedResponse = ref<Response | null>(null)
 const loading = ref(true)
 
-const formatDate = (date?: string) => {
-  if (!date) return '—'
+const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -164,13 +163,6 @@ const formatDate = (date?: string) => {
     hour: '2-digit',
     minute: '2-digit',
   })
-}
-
-const formatAnswer = (value: any) => {
-  if (value === null || value === undefined) return 'No answer'
-  if (Array.isArray(value)) return value.join(', ')
-  if (typeof value === 'object') return JSON.stringify(value)
-  return String(value)
 }
 
 const viewResponse = (response: Response) => {
@@ -182,12 +174,12 @@ const loadData = async () => {
     loading.value = true
     
     // Load campaign details
-    const campaignResponse = await campaignService.getById(campaignId)
-    campaign.value = campaignResponse
+    const campaignResponse = await campaignService.getOne(campaignId)
+    campaign.value = campaignResponse.data
     
     // Load responses
     const responsesData = await responseService.getByCampaign(campaignId)
-    responses.value = responsesData
+    responses.value = responsesData.data
   } catch (error) {
     console.error('Failed to load responses:', error)
   } finally {

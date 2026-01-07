@@ -16,7 +16,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
               </svg>
             </div>
-            <span class="text-lg font-semibold text-white">{{ user?.role === 'RESPONDENT' ? 'Survey Portal' : 'Survey Admin' }}</span>
+            <span class="text-lg font-semibold text-white">Survey Admin</span>
           </div>
           <button
             @click="toggleSidebar"
@@ -115,43 +115,31 @@ const route = useRoute()
 const sidebarOpen = ref(false)
 const user = ref(authService.getCurrentUser())
 
-const navigation = computed(() => {
-  if (user.value?.role === 'RESPONDENT') {
-    return [
-      {
-        name: 'Responder',
-        href: '/respondent',
-        icon: 'IconRespond',
-      },
-    ]
-  }
-
-  return [
-    {
-      name: 'Dashboard',
-      href: '/dashboard',
-      icon: 'IconDashboard',
-    },
-    {
-      name: 'Surveys',
-      href: '/surveys',
-      icon: 'IconSurveys',
-    },
-    {
-      name: 'Campaigns',
-      href: '/campaigns',
-      icon: 'IconCampaigns',
-    },
-    {
-      name: 'Analytics',
-      href: '/analytics',
-      icon: 'IconAnalytics',
-    },
-  ]
-})
+const navigation = [
+  {
+    name: 'Dashboard',
+    href: '/dashboard',
+    icon: 'IconDashboard',
+  },
+  {
+    name: 'Surveys',
+    href: '/surveys',
+    icon: 'IconSurveys',
+  },
+  {
+    name: 'Campaigns',
+    href: '/campaigns',
+    icon: 'IconCampaigns',
+  },
+  {
+    name: 'Analytics',
+    href: '/analytics',
+    icon: 'IconAnalytics',
+  },
+]
 
 const pageTitle = computed(() => {
-  const item = navigation.value.find(item => route.path.startsWith(item.href))
+  const item = navigation.find(item => route.path.startsWith(item.href))
   return item?.name || 'Survey Platform'
 })
 
@@ -206,14 +194,6 @@ const IconAnalytics = {
   template: `
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-    </svg>
-  `
-}
-
-const IconRespond = {
-  template: `
-    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-9 13V5"></path>
     </svg>
   `
 }

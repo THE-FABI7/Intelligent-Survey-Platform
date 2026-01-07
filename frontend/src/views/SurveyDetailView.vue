@@ -15,7 +15,7 @@
             </svg>
             Save as template
           </AppButton>
-          <AppButton variant="primary" @click="createVersion" :loading="savingVersion" :disabled="questions.length === 0 || savingVersion">
+          <AppButton variant="primary" @click="createVersion" :loading="savingVersion" :disabled="questions.length === 0">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
@@ -42,25 +42,14 @@
           <div
             v-for="version in versions"
             :key="version.id"
-            :class="[
-              'flex items-center justify-between bg-dark-900 rounded-lg px-4 py-3 border transition-colors',
-              selectedVersionId === version.id ? 'border-primary-500/50 bg-dark-800' : 'border-dark-700'
-            ]"
+            class="flex items-center justify-between bg-dark-900 rounded-lg px-4 py-3 border border-dark-700"
           >
             <div>
               <p class="text-white font-medium">Version v{{ version.versionNumber }}</p>
               <p class="text-xs text-gray-400">{{ formatDate(version.createdAt) }}</p>
-              <p class="text-xs" :class="version.isActive ? 'text-green-400' : 'text-gray-500'">
-                {{ version.isActive ? 'Active' : 'Inactive' }}
-              </p>
             </div>
             <div class="text-sm text-gray-400">
               {{ version.changeLog || 'No changelog' }}
-            </div>
-            <div class="flex items-center gap-2">
-              <AppButton size="sm" variant="secondary" @click="loadVersionQuestions(version)">
-                Load & edit
-              </AppButton>
             </div>
           </div>
         </div>
@@ -255,7 +244,6 @@ const surveyId = computed(() => route.params.id as string)
 
 const survey = ref<Survey | null>(null)
 const versions = ref<SurveyVersion[]>([])
-const selectedVersionId = ref<string>('')
 const loading = ref(true)
 const savingVersion = ref(false)
 const savingTemplate = ref(false)
@@ -379,7 +367,6 @@ const normalizeQuestions = (): CreateQuestionDto[] => {
 }
 
 const createVersion = async () => {
-  if (savingVersion.value) return
   try {
     savingVersion.value = true
     const payload: CreateSurveyVersionDto = {
@@ -389,7 +376,6 @@ const createVersion = async () => {
     }
     const version = await surveyService.createVersion(surveyId.value, payload)
     versions.value = [version, ...versions.value]
-    loadVersionQuestions(version)
   } catch (error) {
     console.error('Failed to create version', error)
     alert('Failed to create version. Check required fields and logic references.')
@@ -422,50 +408,11 @@ const loadSurvey = async () => {
     const data = await surveyService.getById(surveyId.value)
     survey.value = data
     versions.value = data.versions || []
-
-    const pick = versions.value.find((v) => v.isActive) || versions.value[0]
-    if (pick) {
-      loadVersionQuestions(pick)
-    } else {
-      questions.value = []
-    }
   } catch (error) {
     console.error('Failed to load survey', error)
   } finally {
     loading.value = false
   }
-}
-
-const mapVersionQuestions = (version: SurveyVersion) => {
-  const qs = version.questions || []
-  return qs
-    .slice()
-    .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
-    .map((q, idx) => ({
-      localId: crypto.randomUUID(),
-      text: q.text,
-      type: q.type,
-      code: q.code || `q${idx + 1}`,
-      required: q.required ?? false,
-      orderIndex: q.orderIndex ?? idx + 1,
-      validationRules: q.validationRules || {},
-      options: (q.options || []).map((opt, oIdx) => ({
-        localId: crypto.randomUUID(),
-        text: opt.text,
-        value: opt.value || opt.text,
-        orderIndex: opt.orderIndex ?? oIdx + 1,
-      })),
-      visibilityConditions: q.visibilityConditions || [],
-    }))
-}
-
-const loadVersionQuestions = (version: SurveyVersion) => {
-  selectedVersionId.value = version.id
-  if (!version.questions || version.questions.length === 0) {
-    questions.value = []
-    return
-  }
-  questions.value = mapVersionQuestions(version)
 }
 
 onMounted(() => {

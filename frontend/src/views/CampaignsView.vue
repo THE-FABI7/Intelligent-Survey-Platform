@@ -115,12 +115,6 @@
               >
                 Responses
               </router-link>
-              <button
-                @click="deleteCampaign(row.id)"
-                class="text-sm text-red-400 hover:text-red-300"
-              >
-                Delete
-              </button>
             </div>
           </template>
         </AppTable>
@@ -342,20 +336,6 @@ const closeCampaign = async (id: string) => {
   } catch (error) {
     console.error('Failed to close campaign:', error)
     alert('Failed to close campaign. Please try again.')
-  }
-}
-
-const deleteCampaign = async (id: string) => {
-  if (!confirm('Delete this campaign? This action cannot be undone.')) {
-    return
-  }
-
-  try {
-    await campaignService.delete(id)
-    await loadCampaigns()
-  } catch (error) {
-    console.error('Failed to delete campaign:', error)
-    alert('Failed to delete campaign. It may have linked responses.')
   }
 }
 

@@ -174,15 +174,12 @@ export class SurveysService {
     const normalizedQuestions = this.prepareQuestions(createVersionDto.questions);
     this.validateVisibilityRules(normalizedQuestions);
 
-    // Avoid cascading questions on version save; persist them separately to prevent duplicates
-    const { questions: _ignoredQuestions, ...versionPayload } = createVersionDto;
-
     const versionCount = await this.surveyVersionRepository.count({
       where: { survey: { id: surveyId } },
     });
 
     const version = this.surveyVersionRepository.create({
-      ...versionPayload,
+      ...createVersionDto,
       survey,
       versionNumber: versionCount + 1,
     });

@@ -9,7 +9,7 @@
           </svg>
         </div>
         <h2 class="text-3xl font-bold text-white">Survey Platform</h2>
-        <p class="mt-2 text-sm text-gray-400">Sign in to continue</p>
+        <p class="mt-2 text-sm text-gray-400">Sign in to your admin account</p>
       </div>
 
       <!-- Login form -->
@@ -92,10 +92,8 @@ const handleSubmit = async () => {
     error.value = ''
     
     await authService.login(form.value.email, form.value.password)
-
-    const user = authService.getCurrentUser()
-    const target = user?.role === 'RESPONDENT' ? '/respondent' : '/dashboard'
-    router.push(target)
+    
+    router.push('/dashboard')
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Invalid credentials. Please try again.'
   } finally {
