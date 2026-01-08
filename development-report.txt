@@ -1,0 +1,57 @@
+INFORME DE DESARROLLO
+======================
+
+Alcance entregado (MVP actual)
+- Autenticacion con roles ADMIN/RESPONDENT y guardas JWT.
+- Gestion de encuestas con versionado (v1, v2, ...), plantillas reutilizables y constructor con logica de visibilidad (skip logic) por codigo de pregunta.
+- Tipos de pregunta: texto, numero, multiple choice, checkboxes, escala, carga de archivos (con subida y hosting estatico de evidencias).
+- Campanas ligadas a versiones de encuesta con fechas de inicio/fin y estados creadas/publicadas/cerradas; actualizacion automatica de estado en consultas.
+- Restriccion de una respuesta por campana y validacion de preguntas requeridas respetando logica de visibilidad.
+- Respuestas con items por pregunta y tiempo de completitud.
+- Analiticas: resumenes por campana, distribuciones por pregunta, respuestas crudas, exportaciones CSV/Excel, graficos interactivos con filtros por clic.
+- UI publica para responder campañas con logica de visibilidad en cliente y soporte de subida de archivos; UI admin para crear encuestas, versiones, plantillas y listar campañas/respuestas/analiticas.
+
+Fuera de alcance o pendiente
+- Reporte PDF automatico al cierre, analisis de sentimiento, filtros demograficos avanzados, comparacion lado a lado entre versiones y alertas/recordatorios automaticos.
+- Branding completo de encuestas (tema colores/tipografia) y cuotas/segmentacion avanzada.
+- Limpieza/retencion de archivos subidos y almacenamiento externo (S3) opcional.
+
+Razonamiento de alcance
+- Se priorizo entregar un MVP funcional que cubra el flujo principal: crear encuesta (con logica y tipos), versionarla, publicarla en campana, recolectar respuestas (incluyendo archivos) y ofrecer analitica accionable con exportes. Las capacidades avanzadas (sentimiento, PDF, branding profundo, comparativas v2 vs v1) se dejaron como siguientes iteraciones por tiempo/impacto.
+
+Estructura Backend (NestJS + TypeORM)
+- Modulos clave: auth, users, surveys, campaigns, responses, analytics.
+- Surveys: entidades survey, survey_versions, questions, question_options, survey_templates; controladores para CRUD, versiones y aplicar plantillas; validacion de skip logic y codigos unicos.
+- Campaigns: entidad campaign ligada a survey_version; estados CREATED/PUBLISHED/CLOSED; publish/close y refresco automatico por fechas startDate/endDate.
+- Responses: entidad response con items; validacion de required + visibilidad; restriccion una respuesta por usuario/campana; subida de archivos con Multer a /uploads y servido estatico.
+- Analytics: endpoints de metricas, distribuciones por pregunta, respuestas crudas y export CSV/Excel.
+- Infra: Swagger, ValidationPipe, CORS, static assets /uploads.
+
+Estructura Frontend (Vue 3 + Vite + Tailwind)
+- Componentes base (AppButton, AppCard, AppTable, AppLayout, AppTag).
+- Vistas: login, dashboard, campañas, detalle campaña/responder, encuestas (listado y builder), analiticas.
+- Builder de encuestas con bloques (tipos, opciones, escala, archivo, skip logic) y guardado como version o plantilla.
+- Vista publica RespondCampaignView con inputs dinamicos, logica de visibilidad, validacion requeridos y subida de archivos.
+- Servicios API tipados (axios) para auth, surveys, campaigns, responses, analytics; interceptor JWT.
+
+Estructura de Datos (modelo relacional)
+- users(id, email, role, ...).
+- surveys(id, title, description, createdBy) 1..* survey_versions.
+- survey_versions(id, versionNumber, changeLog, isActive, survey_id) 1..* questions, 1..* campaigns.
+- questions(id, text, code, type, required, orderIndex, validationRules, visibilityConditions, survey_version_id) 0..* question_options.
+- question_options(id, text, value, orderIndex, question_id).
+- survey_templates(id, name, description, questions JSONB, createdBy).
+- campaigns(id, name, description, startDate, endDate, status, survey_version_id, createdBy).
+- responses(id, campaign_id, user_id nullable, anonymousId, startedAt, completedAt, completionTimeSeconds) 1..* response_items.
+- response_items(id, response_id, question_id, value JSONB).
+- Archivos de evidencia: almacenados en disco en /uploads con referencia en value de la respuesta (url, nombre, mime, size).
+
+Notas operativas
+- Al iniciar, main.ts asegura carpeta uploads y sirve /uploads de forma publica.
+- Endpoints de campanas refrescan estado segun fecha al consultarse.
+- El frontend construye URLs de archivo combinando VITE_API_URL con el path devuelto por el backend.
+
+Recomendaciones siguientes
+- Generar PDF al cierre con graficos y metricas de salud (tasa de finalizacion, tiempo promedio, abandono por pregunta).
+- Agregar filtros demograficos y sentimiento basico para texto.
+- Branding configurable en encuestas publicas y limpieza/retencion automatica de archivos.

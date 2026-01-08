@@ -368,20 +368,34 @@ const syncExtensions = (q: any) => {
 }
 
 const normalizeQuestions = (): CreateQuestionDto[] => {
-  return questions.value.map((q, idx) => ({
-    text: q.text,
-    type: q.type,
-    code: (q.code || `q${idx + 1}`).trim(),
-    required: q.required ?? false,
-    orderIndex: q.orderIndex ?? idx + 1,
-    validationRules: q.validationRules,
-    options: q.options?.map((opt, oIdx) => ({
-      text: opt.text,
-      value: opt.value || opt.text,
-      orderIndex: oIdx + 1,
-    })),
-    visibilityConditions: q.visibilityConditions?.filter((c) => c.questionCode),
-  }))
+  const codes = new Set<string>()
+
+  const mapped = questions.value.map((q, idx) => {
+    const code = (q.code || `q${idx + 1}`).trim()
+    return {
+      text: q.text,
+      type: q.type,
+      code,
+      required: q.required ?? false,
+      orderIndex: q.orderIndex ?? idx + 1,
+      validationRules: q.validationRules,
+      options: q.options?.map((opt, oIdx) => ({
+        text: opt.text,
+        value: opt.value || opt.text,
+        orderIndex: oIdx + 1,
+      })),
+      visibilityConditions: q.visibilityConditions?.filter((c) => c.questionCode),
+    }
+  })
+
+  for (const q of mapped) {
+    if (codes.has(q.code)) {
+      throw new Error(`Duplicate question code detected: ${q.code}. Cada pregunta debe tener un código único.`)
+    }
+    codes.add(q.code)
+  }
+
+  return mapped
 }
 
 const createVersion = async () => {
@@ -398,7 +412,8 @@ const createVersion = async () => {
     await loadVersion(version.id)
   } catch (error) {
     console.error('Failed to create version', error)
-    alert('Failed to create version. Check required fields and logic references.')
+    const message = (error as any)?.message || 'Failed to create version. Check required fields and logic references.'
+    alert(message)
   } finally {
     savingVersion.value = false
   }
@@ -416,7 +431,8 @@ const saveTemplate = async () => {
     alert('Template saved')
   } catch (error) {
     console.error('Failed to save template', error)
-    alert('Failed to save template')
+    const message = (error as any)?.message || 'Failed to save template'
+    alert(message)
   } finally {
     savingTemplate.value = false
   }

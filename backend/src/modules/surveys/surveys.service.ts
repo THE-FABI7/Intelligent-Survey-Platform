@@ -171,7 +171,9 @@ export class SurveysService {
   ): Promise<SurveyVersion> {
     const survey = await this.findOne(surveyId);
 
-    const normalizedQuestions = this.prepareQuestions(createVersionDto.questions);
+    const { questions: incomingQuestions, ...rest } = createVersionDto;
+
+    const normalizedQuestions = this.prepareQuestions(incomingQuestions);
     this.validateVisibilityRules(normalizedQuestions);
 
     const versionCount = await this.surveyVersionRepository.count({
@@ -179,7 +181,7 @@ export class SurveysService {
     });
 
     const version = this.surveyVersionRepository.create({
-      ...createVersionDto,
+      ...rest,
       survey,
       versionNumber: versionCount + 1,
     });

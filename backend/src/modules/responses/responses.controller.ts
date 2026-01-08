@@ -22,8 +22,10 @@ import { Roles, CurrentUser } from '@common/decorators';
 import { UserRole } from '@common/enums';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
+import type { Multer } from 'multer';
 import { join, extname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
+import type { Express } from 'express';
 
 const uploadsDir = join(process.cwd(), 'uploads');
 if (!existsSync(uploadsDir)) {
@@ -33,7 +35,7 @@ if (!existsSync(uploadsDir)) {
 @ApiTags('Responses')
 @Controller('responses')
 export class ResponsesController {
-  constructor(private readonly responsesService: ResponsesService) {}
+  constructor(private readonly responsesService: ResponsesService) { }
 
   @Post('upload')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -53,7 +55,7 @@ export class ResponsesController {
       limits: { fileSize: 15 * 1024 * 1024 },
     }),
   )
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+  async uploadFile(@UploadedFile() file: Multer.File) {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
