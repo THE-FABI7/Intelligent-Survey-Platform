@@ -26,6 +26,13 @@ export class AnalyticsController {
     return this.analyticsService.getCampaignMetrics(campaignId);
   }
 
+  @Get('campaigns/:campaignId/questions')
+  @ApiOperation({ summary: 'Get analytics for all questions in a campaign (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Questions analytics' })
+  getQuestionsAnalytics(@Param('campaignId') campaignId: string) {
+    return this.analyticsService.getCampaignQuestionsAnalytics(campaignId);
+  }
+
   @Get('campaigns/:campaignId/questions/:questionId')
   @ApiOperation({
     summary: 'Get analytics for a specific question in a campaign (Admin only)',
@@ -51,5 +58,20 @@ export class AnalyticsController {
   async exportCampaign(@Param('campaignId') campaignId: string) {
     const csv = await this.analyticsService.exportCampaignCsv(campaignId);
     return csv;
+  }
+
+  @Get('campaigns/:campaignId/export.xlsx')
+  @ApiOperation({ summary: 'Export campaign responses to Excel-compatible CSV (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Excel export' })
+  async exportCampaignExcel(@Param('campaignId') campaignId: string) {
+    const csv = await this.analyticsService.exportCampaignCsv(campaignId);
+    return csv;
+  }
+
+  @Get('campaigns/:campaignId/raw')
+  @ApiOperation({ summary: 'Get raw responses for a campaign (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Raw responses' })
+  getRawResponses(@Param('campaignId') campaignId: string) {
+    return this.analyticsService.getCampaignRawResponses(campaignId);
   }
 }

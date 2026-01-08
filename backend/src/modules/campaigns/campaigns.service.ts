@@ -23,6 +23,26 @@ export class CampaignsService {
     private surveyVersionRepository: Repository<SurveyVersion>,
   ) {}
 
+  private async refreshStatuses(): Promise<void> {
+    const now = new Date();
+
+    await this.campaignRepository
+      .createQueryBuilder()
+      .update(Campaign)
+      .set({ status: CampaignStatus.PUBLISHED })
+      .where('status = :created', { created: CampaignStatus.CREATED })
+      .andWhere('startDate <= :now', { now })
+      .execute();
+
+    await this.campaignRepository
+      .createQueryBuilder()
+      .update(Campaign)
+      .set({ status: CampaignStatus.CLOSED })
+      .where('status = :published', { published: CampaignStatus.PUBLISHED })
+      .andWhere('endDate < :now', { now })
+      .execute();
+  }
+
   async create(
     createCampaignDto: CreateCampaignDto,
     userId: string,
@@ -51,6 +71,7 @@ export class CampaignsService {
   }
 
   async findAll(): Promise<Campaign[]> {
+    await this.refreshStatuses();
     return this.campaignRepository.find({
       relations: ['surveyVersion', 'surveyVersion.survey'],
       order: { createdAt: 'DESC' },
@@ -58,6 +79,7 @@ export class CampaignsService {
   }
 
   async findAvailable(): Promise<Campaign[]> {
+    await this.refreshStatuses();
     const now = new Date();
 
     return this.campaignRepository.find({
@@ -72,6 +94,7 @@ export class CampaignsService {
   }
 
   async findOne(id: string): Promise<Campaign> {
+    await this.refreshStatuses();
     const campaign = await this.campaignRepository.findOne({
       where: { id },
       relations: [
@@ -90,6 +113,7 @@ export class CampaignsService {
   }
 
   async findPublicById(id: string): Promise<Campaign> {
+    await this.refreshStatuses();
     const campaign = await this.findOne(id);
 
     if (campaign.status !== CampaignStatus.PUBLISHED) {

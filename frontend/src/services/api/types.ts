@@ -113,6 +113,14 @@ export interface SubmitResponsePayload {
   items: SubmitResponseItem[]
 }
 
+export interface UploadedFileResponse {
+  fileName: string
+  originalName: string
+  size: number
+  mimeType: string
+  url: string
+}
+
 export interface ResponseItem {
   id: string
   questionId: string

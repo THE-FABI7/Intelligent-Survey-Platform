@@ -1,5 +1,5 @@
 import http from './http'
-import { Response, SubmitResponsePayload } from './types'
+import { Response, SubmitResponsePayload, UploadedFileResponse } from './types'
 
 export const responseService = {
   async getAll(): Promise<Response[]> {
@@ -19,6 +19,19 @@ export const responseService = {
 
   async submit(payload: SubmitResponsePayload): Promise<Response> {
     const response = await http.post<Response>('/responses/submit', payload)
+    return response.data
+  },
+
+  async upload(file: File): Promise<UploadedFileResponse> {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await http.post<UploadedFileResponse>('/responses/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+
     return response.data
   },
 }

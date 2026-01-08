@@ -136,7 +136,7 @@ const inputComponent = (q: Question) => {
     case 'CHECKBOX':
       return CheckboxGroup
     case 'FILE_UPLOAD':
-      return FileStub
+      return FileUploadInput
     default:
       return TextInput
   }
@@ -293,9 +293,69 @@ const CheckboxGroup = defineComponent({
   },
 })
 
-const FileStub = defineComponent({
-  name: 'FileStub',
-  setup: () => () =>
-    h('p', { class: 'text-sm text-gray-400' }, 'Las cargas de archivo se gestionan en el servidor. Continúa.'),
+const FileUploadInput = defineComponent({
+  name: 'FileUploadInput',
+  props: {
+    modelValue: { type: Object, default: null },
+    question: { type: Object, required: true },
+  },
+  emits: ['update:modelValue'],
+  setup(props, { emit }) {
+    const uploading = ref(false)
+    const error = ref('')
+    const apiBase = import.meta.env.VITE_API_URL || ''
+
+    const onChange = async (event: Event) => {
+      const file = (event.target as HTMLInputElement).files?.[0]
+      if (!file) return
+
+      uploading.value = true
+      error.value = ''
+
+      try {
+        const uploaded = await responseService.upload(file)
+        const url = uploaded.url.startsWith('http') ? uploaded.url : `${apiBase}${uploaded.url}`
+        emit('update:modelValue', {
+          url,
+          name: uploaded.originalName,
+          size: uploaded.size,
+          mimeType: uploaded.mimeType,
+          storedName: uploaded.fileName,
+        })
+      } catch (err) {
+        console.error('File upload failed', err)
+        error.value = (err as any)?.response?.data?.message || 'No se pudo subir el archivo.'
+      } finally {
+        uploading.value = false
+      }
+    }
+
+    const current = computed(() => props.modelValue as any)
+
+    return () =>
+      h('div', { class: 'space-y-2' }, [
+        h('input', {
+          type: 'file',
+          class: baseInputClasses,
+          onChange,
+        }),
+        uploading.value
+          ? h('p', { class: 'text-xs text-gray-400' }, 'Subiendo archivo...')
+          : null,
+        current.value?.url
+          ? h(
+              'a',
+              {
+                href: current.value.url,
+                target: '_blank',
+                rel: 'noopener noreferrer',
+                class: 'text-xs text-primary-400',
+              },
+              `Archivo: ${current.value.name || 'Ver archivo'}`,
+            )
+          : null,
+        error.value ? h('p', { class: 'text-xs text-red-400' }, error.value) : null,
+      ])
+  },
 })
 </script>

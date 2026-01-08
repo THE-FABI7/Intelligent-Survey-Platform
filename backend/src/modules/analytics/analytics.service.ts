@@ -208,6 +208,34 @@ export class AnalyticsService {
     return { ...base, rawAnswers: answers };
   }
 
+  async getCampaignQuestionsAnalytics(campaignId: string) {
+    const campaign = await this.campaignRepository.findOne({
+      where: { id: campaignId },
+      relations: ['surveyVersion', 'surveyVersion.questions'],
+    });
+
+    if (!campaign) {
+      throw new NotFoundException(`Campaign with ID ${campaignId} not found`);
+    }
+
+    const questions = campaign.surveyVersion?.questions || [];
+    const analytics = await Promise.all(
+      questions.map((q) => this.getQuestionAnalytics(campaignId, q.id)),
+    );
+
+    return analytics;
+  }
+
+  async getCampaignRawResponses(campaignId: string) {
+    const responses = await this.responseRepository.find({
+      where: { campaign: { id: campaignId } },
+      relations: ['user', 'items', 'items.question'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return responses;
+  }
+
   async getSurveySummary(surveyId: string) {
     const campaigns = await this.campaignRepository
       .createQueryBuilder('campaign')

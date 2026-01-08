@@ -18,4 +18,28 @@ export const analyticsService = {
     )
     return response.data
   },
+
+  async getQuestionsAnalytics(campaignId: string): Promise<any[]> {
+    const response = await http.get<any[]>(`/analytics/campaigns/${campaignId}/questions`)
+    return response.data
+  },
+
+  async exportCsv(campaignId: string): Promise<Blob> {
+    const response = await http.get(`/analytics/campaigns/${campaignId}/export`, {
+      responseType: 'blob',
+    })
+    return response.data
+  },
+
+  async exportExcel(campaignId: string): Promise<Blob> {
+    const response = await http.get(`/analytics/campaigns/${campaignId}/export.xlsx`, {
+      responseType: 'blob',
+    })
+    return response.data
+  },
+
+  async getRawResponses(campaignId: string): Promise<any[]> {
+    const response = await http.get<any[]>(`/analytics/campaigns/${campaignId}/raw`)
+    return response.data
+  },
 }
